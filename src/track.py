@@ -31,14 +31,23 @@ out = cv2.VideoWriter(
 )
 
 # Annotators
-box_annotator = sv.BoxAnnotator()
-label_annotator = sv.LabelAnnotator()
-trace_annotator = sv.TraceAnnotator()
+box_annotator = sv.BoxAnnotator(
+    thickness=2
+)
+label_annotator = sv.LabelAnnotator(
+    text_scale=0.5,
+    text_thickness=1
+)
+trace_annotator = sv.TraceAnnotator(
+    thickness=2,
+    trace_length=30
+)
 
 prev_time = 0
 
+frame_count = 0
 for image_path in image_paths:
-
+    frame_count += 1
     frame = cv2.imread(image_path)
 
     # FPS calculation
@@ -66,7 +75,7 @@ for image_path in image_paths:
 
     # Labels
     labels = [
-        f"ID {tracker_id}"
+        f"Person {tracker_id}"
         for tracker_id in detections.tracker_id
     ]
 
@@ -117,6 +126,16 @@ for image_path in image_paths:
         annotated_frame,
         (width, height)
     )
+
+    cv2.putText(
+    annotated_frame,
+    f"Frame: {frame_count}",
+    (20, 120),
+    cv2.FONT_HERSHEY_SIMPLEX,
+    1,
+    (255, 255, 0),
+    2
+)
 
     out.write(annotated_frame)
 
