@@ -1,34 +1,32 @@
 from ultralytics import YOLO
 import supervision as sv
 import cv2
+import os
+import glob
 import time
 
-# Load YOLO model
+# Load model
 model = YOLO("yolov8s.pt")
 
-# Initialize ByteTrack
+# ByteTrack
 tracker = sv.ByteTrack()
 
-# Video path
-video_path = "data/sample.mp4"
+# Path to image sequence
+image_folder = "data/uav0000117_02622_v"
 
-# Open video
-cap = cv2.VideoCapture(video_path)
+# Get all frames
+image_paths = sorted(glob.glob(os.path.join(image_folder, "*.*")))
 
-if not cap.isOpened():
-    print("Error opening video")
-    exit()
+# Read first frame
+first_frame = cv2.imread(image_paths[0])
 
-# Video properties
-width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-fps = cap.get(cv2.CAP_PROP_FPS)
+height, width, _ = first_frame.shape
 
-# Output writer
+# Output video writer
 out = cv2.VideoWriter(
-    "outputs/tracking_output.avi",
+    "outputs/visdrone_tracking.avi",
     cv2.VideoWriter_fourcc(*'XVID'),
-    fps,
+    20,
     (width, height)
 )
 
@@ -37,29 +35,33 @@ box_annotator = sv.BoxAnnotator()
 label_annotator = sv.LabelAnnotator()
 trace_annotator = sv.TraceAnnotator()
 
-while True:
-    start_time = time.time()
-    ret, frame = cap.read()
+prev_time = 0
 
-    if not ret:
-        break
+for image_path in image_paths:
 
-    # Resize for better performance
-    frame = cv2.resize(frame, (1280, 720))
+    frame = cv2.imread(image_path)
+
+    # FPS calculation
+    current_time = time.time()
+    fps = 1 / (current_time - prev_time) if prev_time != 0 else 0
+    prev_time = current_time
+
+    # Resize for better detection
+    frame_resized = cv2.resize(frame, (1280, 720))
 
     # YOLO detection
     results = model(
-        frame,
+        frame_resized,
         classes=[0],
         imgsz=1280,
-        conf=0.20,
+        conf=0.2,
         verbose=False
     )[0]
 
     # Convert detections
     detections = sv.Detections.from_ultralytics(results)
 
-    # Update tracker
+    # Tracking
     detections = tracker.update_with_detections(detections)
 
     # Labels
@@ -70,7 +72,7 @@ while True:
 
     # Draw traces
     annotated_frame = trace_annotator.annotate(
-        scene=frame.copy(),
+        scene=frame_resized.copy(),
         detections=detections
     )
 
@@ -87,6 +89,29 @@ while True:
         labels=labels
     )
 
+    # People count
+    people_count = len(detections)
+
+    cv2.putText(
+        annotated_frame,
+        f"People Count: {people_count}",
+        (20, 40),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (0, 255, 0),
+        2
+    )
+
+    cv2.putText(
+        annotated_frame,
+        f"FPS: {fps:.2f}",
+        (20, 80),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (0, 255, 0),
+        2
+    )
+
     # Resize back
     annotated_frame = cv2.resize(
         annotated_frame,
@@ -94,16 +119,9 @@ while True:
     )
 
     out.write(annotated_frame)
-    
-    end_time = time.time()
 
-    fps_value = 1 / (end_time - start_time)
+    print(f"Processing {os.path.basename(image_path)}")
 
-    print(f"FPS: {fps_value:.2f}")
-
-    print("Tracking persons...")
-
-cap.release()
 out.release()
 
-print("Tracking completed successfully!")
+print("VisDrone tracking completed!")
