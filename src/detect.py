@@ -2,7 +2,7 @@ from ultralytics import YOLO
 import cv2
 
 # Load YOLO model
-model = YOLO("yolov8s.pt")
+model = YOLO("yolov8m.pt")
 
 # Input video
 video_path = "data/sample.mp4"
@@ -45,8 +45,8 @@ while True:
     results = model(
         frame,
         classes=[0],
-        imgsz=1280,
-        conf=0.20,
+        imgsz=1536,
+        conf=0.12,
         verbose=False
     )
 
