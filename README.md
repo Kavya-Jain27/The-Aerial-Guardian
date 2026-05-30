@@ -59,8 +59,8 @@ Video Output  JSON Log    CSV Report   Intrusion Screenshots
 Clone the repository:
 
 ```bash
-git clone <your-repository-link>
-cd Aerial-Guardian
+git clone https://github.com/Kavya-Jain27/The-Aerial-Guardian.git
+cd The-Aerial-Guardian
 ```
 
 Install dependencies:
